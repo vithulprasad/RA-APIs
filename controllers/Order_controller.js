@@ -255,7 +255,7 @@ exports.verifyPayment = async (req, res) => {
 exports.razorpayWebhook = async (req, res) => {
   try {
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-
+    console.log("entering to updated by webhook",secret)
     const shasum = crypto.createHmac("sha256", secret);
     shasum.update(JSON.stringify(req.body));
     const digest = shasum.digest("hex");
@@ -268,7 +268,7 @@ exports.razorpayWebhook = async (req, res) => {
     }
 
     const event = req.body.event;
-
+console.log("entering to updated by webhook",event)
     if (event === "payment.captured") {
       const payment = req.body.payload.payment.entity;
 
