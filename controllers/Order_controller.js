@@ -254,10 +254,10 @@ exports.verifyPayment = async (req, res) => {
 // ✅ 3. Webhook (backup verification)
 exports.razorpayWebhook = async (req, res) => {
   try {
-    console.log('entering to webhook');
+    
     
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-    console.log("entering to updated by webhook",secret)
+  
     const shasum = crypto.createHmac("sha256", secret);
     shasum.update(JSON.stringify(req.body));
     const digest = shasum.digest("hex");
@@ -270,7 +270,7 @@ exports.razorpayWebhook = async (req, res) => {
     }
 
     const event = req.body.event;
-console.log("entering to updated by webhook",event)
+
     if (event === "payment.captured") {
       const payment = req.body.payload.payment.entity;
 
@@ -280,7 +280,7 @@ console.log("entering to updated by webhook",event)
           $set: {
             razorpay_payment_id: payment.id,
             paymentStatus: "paid",
-            orderStatus: "confirmed",
+            orderStatus: "processing",
             paidAt: new Date(),
           },
         }
