@@ -254,6 +254,8 @@ exports.verifyPayment = async (req, res) => {
 // ✅ 3. Webhook (backup verification)
 exports.razorpayWebhook = async (req, res) => {
   try {
+    console.log('entering to webhook');
+    
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
     console.log("entering to updated by webhook",secret)
     const shasum = crypto.createHmac("sha256", secret);
@@ -289,7 +291,7 @@ console.log("entering to updated by webhook",event)
 
     res.json({ success: true });
   } catch (err) {
-    console.error("webhook error:", err.message);
+    console.log("webhook error:", err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 };
