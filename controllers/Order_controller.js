@@ -363,10 +363,12 @@ exports.get_order_single_by_id = async (req, res) => {
       razorpay_order_id: order.razorpay_order_id,
       paidAt: order.paidAt,
       paymentStatus:order.paymentStatus,
+      orderStatus:order.orderStatus,
       products: order.products.map((p) => ({
         name: p.product?.name,
         quantity: p.quantity,
         total_price: p.total_price,
+        image:p.front_image
       })),
       address: order.address,
     };
