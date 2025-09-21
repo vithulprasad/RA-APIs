@@ -4,14 +4,14 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: "vidhueco123@gmail.com",
-    pass: "xwhla hgjuklclcxb", // App password
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS, // App password
   },
 });
 
 const sendEmail = async (to, subject, html) => {
   const mailOptions = {
-    from: "vidhueco123@gmail.com",
+    from: process.env.EMAIL_USER,
     to,
     subject,
     html, // ✅ HTML content instead of text
