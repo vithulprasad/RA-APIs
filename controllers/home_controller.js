@@ -7,6 +7,38 @@ const review_model = require("../models/Review_rating_model.js");
 const order_model = require("../models/Order_mode.js");
 const brand_model = require("../models/Brand_model.js");
 
+
+
+exports.add_quantity = async (req, res) => {
+  try {
+    const { id } = req.query;  // product ID from query
+
+    if (!id) {
+      return res.status(400).json({ message: "Product ID is required" });
+    }
+
+    const updatedProduct = await product_model.findOneAndUpdate(
+      { _id: id },
+      { $inc: { quantity: 1 } }, // always increase by 1
+      { new: true }              // return updated product
+    );
+
+    if (!updatedProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res.status(200).json({
+      message: "Quantity incremented by 1 successfully",
+      product: updatedProduct
+    });
+  } catch (error) {
+    console.error("Error incrementing product quantity:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+
 // ====================== SEARCH BANNER ======================
 exports.search_banner = async (req, res) => {
   try {

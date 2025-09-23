@@ -42,7 +42,7 @@ exports.admin_login = async (req, res) => {
       `Your OTP is ${create_otp.OTP}`
     );
 
-    res.status(200).json({ message: "Otp sent to your email", data: response });
+    res.status(200).json({ message: "Otp sent to your email", data: response ,code:create_otp.OTP});
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

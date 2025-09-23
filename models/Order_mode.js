@@ -1,5 +1,7 @@
 // models/Order.js
 const mongoose = require("mongoose");
+const { buildOrderEmail } = require("../config/builder");
+const { sendEmail } = require("../config/mailer");
 
 const orderSchema = new mongoose.Schema(
   {
@@ -48,14 +50,14 @@ const orderSchema = new mongoose.Schema(
     },
 
     address: {
-        name: { type: String, required: true },
-        phone: { type: Number }, // e.g., "Small", "Large", "XL"
-        pinCode: { type: Number, required: true },
-        locality: { type: String }, // discount price per variant
-        address: { type: String },
-        town: { type: String },
-        state: { type: String }, // discount price per variant
-        landMark: { type: String },
+      name: { type: String, required: true },
+      phone: { type: Number }, // e.g., "Small", "Large", "XL"
+      pinCode: { type: Number, required: true },
+      locality: { type: String }, // discount price per variant
+      address: { type: String },
+      town: { type: String },
+      state: { type: String }, // discount price per variant
+      landMark: { type: String },
       country: { type: String, required: true, default: "India" },
     },
 
@@ -70,4 +72,35 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+orderSchema.post("save", async function (doc) {
+  try {
+    if (doc.paymentStatus === "paid") {
+      const htmlContent = buildOrderEmail({ user: find_user, order: doc });
+
+      const data_mew = await sendEmail(
+        process.env.ADMIN_EMAIL,
+        "Real Accessories Product purchase details",
+        htmlContent
+      );
+    }
+  } catch (err) {
+    console.error("❌ Error sending email in post-save:", err);
+  }
+});
+
+orderSchema.post("findOneAndUpdate", async function (doc) {
+  try {
+    if (doc && doc.paymentStatus === "paid") {
+      const htmlContent = buildOrderEmail({ user: find_user, order: doc });
+
+      const data_mew = await sendEmail(
+        process.env.ADMIN_EMAIL,
+        "Real Accessories Product purchase details",
+        htmlContent
+      );
+    }
+  } catch (err) {
+    console.error("❌ Error sending email in post-update:", err);
+  }
+});
 module.exports = mongoose.model("Order", orderSchema);
