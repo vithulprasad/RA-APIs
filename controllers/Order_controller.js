@@ -227,11 +227,12 @@ exports.verifyPayment = async (req, res) => {
 
       const htmlContent = buildOrderEmail({ user: find_user, order: order });
 
-      const data_mew = await sendEmail(
-        find_user.email + " " + process.env.ADMIN_EMAIL,
-        "Real Accessories Product purchase details",
-        htmlContent
-      );
+     const data_mew = await sendEmail(
+          `${find_user.email}, ${process.env.ADMIN_EMAIL}`,
+          "Real Accessories Product purchase details",
+          htmlContent
+        );
+
 
       return res.json({
         success: true,
@@ -289,7 +290,7 @@ exports.razorpayWebhook = async (req, res) => {
           <p><strong>Your Order:</strong> ${data}</p>
       </div>
   `;
-      await sendEmail(process.env.ADMIN_EMAIL, "Real Accessories Order");
+      await sendEmail(process.env.ADMIN_EMAIL, "Real Accessories Order",htmlContent);
 
       // (Optional) Deduct stock here too as backup
     }
