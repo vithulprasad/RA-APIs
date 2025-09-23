@@ -25,7 +25,7 @@ const authenticate = (req, res, next) => {
   });
 };
 const check_admin = async (req, res, next) => {
-  const user = req.user;
+  const user = req.user.user_id;
   const find_admin = await Admin_model.findOne({ _id: user });
   if (!find_admin) {
     res.status(404).json({ message: "access restricted you are not admin" });
