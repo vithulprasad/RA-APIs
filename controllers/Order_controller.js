@@ -228,11 +228,10 @@ exports.verifyPayment = async (req, res) => {
       const htmlContent = buildOrderEmail({ user: find_user, order: order });
 
       const data_mew = await sendEmail(
-        find_user.email,
+        find_user.email + " " + process.env.ADMIN_EMAIL,
         "Real Accessories Product purchase details",
         htmlContent
       );
-      
 
       return res.json({
         success: true,
@@ -254,10 +253,8 @@ exports.verifyPayment = async (req, res) => {
 // ✅ 3. Webhook (backup verification)
 exports.razorpayWebhook = async (req, res) => {
   try {
-    
-    
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-  
+
     const shasum = crypto.createHmac("sha256", secret);
     shasum.update(JSON.stringify(req.body));
     const digest = shasum.digest("hex");
@@ -274,7 +271,7 @@ exports.razorpayWebhook = async (req, res) => {
     if (event === "payment.captured") {
       const payment = req.body.payload.payment.entity;
 
-      await Order.findOneAndUpdate(
+      const data = await Order.findOneAndUpdate(
         { razorpay_order_id: payment.order_id },
         {
           $set: {
@@ -285,6 +282,14 @@ exports.razorpayWebhook = async (req, res) => {
           },
         }
       );
+
+      const htmlContent = `
+      <div style="background-color:#f5f8fa; padding:20px; font-family:Arial, sans-serif; text-align:center;">
+
+          <p><strong>Your Order:</strong> ${data}</p>
+      </div>
+  `;
+      await sendEmail(process.env.ADMIN_EMAIL, "Real Accessories Order");
 
       // (Optional) Deduct stock here too as backup
     }
@@ -362,13 +367,13 @@ exports.get_order_single_by_id = async (req, res) => {
       totalAmount: order.totalAmount,
       razorpay_order_id: order.razorpay_order_id,
       paidAt: order.paidAt,
-      paymentStatus:order.paymentStatus,
-      orderStatus:order.orderStatus,
+      paymentStatus: order.paymentStatus,
+      orderStatus: order.orderStatus,
       products: order.products.map((p) => ({
         name: p.product?.name,
         quantity: p.quantity,
         total_price: p.total_price,
-        image:p.front_image
+        image: p.front_image,
       })),
       address: order.address,
     };
@@ -400,7 +405,7 @@ exports.getAllOrders_admin = async (req, res) => {
     if (type !== "all" && allowedStatuses.includes(type.toLowerCase())) {
       filter.orderStatus = type.toLowerCase();
     }
-  console.log(filter)
+    console.log(filter);
     // Fetch orders with pagination
     const orders = await Order.find(filter)
       .populate("user", "name email")
@@ -438,7 +443,7 @@ exports.getAllOrders_admin = async (req, res) => {
       orderStatus: "cancelled",
     });
     const completed = await Order.countDocuments({ orderStatus: "completed" });
-    console.log(orders.length)
+    console.log(orders.length);
     res.json({
       success: true,
       orders: formatted,
@@ -532,7 +537,7 @@ exports.get_order_admin_single = async (req, res) => {
       key_secret: process.env.RAZORPAY_KEY_SECRET,
     });
     // 1️⃣ Find order by ID and populate product & user
-    const order = await Order.findOne({razorpay_order_id:id})
+    const order = await Order.findOne({ razorpay_order_id: id })
       .populate("products.product", "name discount_price front_image")
       .populate("user", "name email phone");
 
@@ -576,7 +581,6 @@ exports.get_order_admin_single = async (req, res) => {
         quantity: p.quantity,
         total_price: p.total_price,
         variant: p.variant,
-        
       })),
 
       address: order.address,
@@ -609,7 +613,9 @@ exports.order_action = async (req, res) => {
     // Find the order
     const order = await Order.findOne({ razorpay_order_id: id }); // or use _id if that's your identifier
     if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
     }
 
     // Allowed transitions
@@ -624,16 +630,16 @@ exports.order_action = async (req, res) => {
     const nextStatus = validTransitions[currentStatus];
 
     if (!nextStatus) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `No valid transition from status "${currentStatus}"` 
+      return res.status(400).json({
+        success: false,
+        message: `No valid transition from status "${currentStatus}"`,
       });
     }
 
     if (nextStatus !== action) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Invalid action. Next valid status after "${currentStatus}" is "${nextStatus}"` 
+      return res.status(400).json({
+        success: false,
+        message: `Invalid action. Next valid status after "${currentStatus}" is "${nextStatus}"`,
       });
     }
 
@@ -646,7 +652,6 @@ exports.order_action = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
-
 
 exports.get_customers = async (req, res) => {
   try {
@@ -694,7 +699,7 @@ exports.get_customers = async (req, res) => {
           email: 1,
           phone: 1,
           totalSpent: 1,
-          flag:1,
+          flag: 1,
           orders: { $size: "$completedOrders" },
         },
       },
@@ -714,13 +719,14 @@ exports.get_customers = async (req, res) => {
   }
 };
 
-
 exports.get_customer_profile = async (req, res) => {
   try {
     const { id } = req.query;
 
     if (!id) {
-      return res.status(400).json({ success: false, error: "User ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, error: "User ID is required" });
     }
 
     // ✅ Get user details
@@ -746,7 +752,6 @@ exports.get_customer_profile = async (req, res) => {
   }
 };
 
-
 exports.send_customer_email = async (req, res) => {
   try {
     const { subject, message, id } = req.body;
@@ -754,7 +759,10 @@ exports.send_customer_email = async (req, res) => {
     if (!id || !subject || !message) {
       return res
         .status(400)
-        .json({ success: false, error: "id, subject, and message are required" });
+        .json({
+          success: false,
+          error: "id, subject, and message are required",
+        });
     }
 
     // ✅ Find user by ID
@@ -778,9 +786,7 @@ exports.send_customer_email = async (req, res) => {
     `;
 
     // ✅ Send email
-     sendEmail(email, subject, htmlContent);
-
-  
+    sendEmail(email, subject, htmlContent);
 
     res.status(200).json({
       success: true,
