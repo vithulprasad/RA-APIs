@@ -283,10 +283,9 @@ exports.razorpayWebhook = async (req, res) => {
           },
         }
       );
-
+      console.log(data,'this is the response form webhook')
       const htmlContent = `
       <div style="background-color:#f5f8fa; padding:20px; font-family:Arial, sans-serif; text-align:center;">
-
           <p><strong>Your Order:</strong> ${data}</p>
       </div>
   `;
