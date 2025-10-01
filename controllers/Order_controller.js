@@ -655,7 +655,9 @@ exports.order_action = async (req, res) => {
 
 exports.get_customers = async (req, res) => {
   try {
-    const { limit = 10, skip = 0 } = req.query;
+    const { limit = 50, skip = 0 } = req.query;
+
+    console.log(req.query)
 
     // ✅ Total user count
     const userCount = await user_model.countDocuments();

@@ -1070,7 +1070,7 @@ exports.add_to_cart = async (req, res) => {
 
     if (existingItem) {
       // Check stock
-      if (existingItem.quantity + 1 > product.stock) {
+      if (existingItem.quantity + 1 > product.quantity) {
         return res
           .status(400)
           .json({ message: "Requested quantity exceeds available stock" });
@@ -1079,7 +1079,7 @@ exports.add_to_cart = async (req, res) => {
       existingItem.quantity += 1;
     } else {
       // Add new product to cart
-      if (product.stock < 1) {
+      if (product.quantity < 1) {
         return res.status(400).json({ message: "Product is out of stock" });
       }
 
@@ -1107,7 +1107,7 @@ exports.add_to_cart = async (req, res) => {
     await cart.save();
 
     res.status(200).json({
-      message: "cart updated",
+      message: "product added to cart",
       cart_count: cart.items.length,
     });
   } catch (error) {
