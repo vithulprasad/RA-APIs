@@ -352,7 +352,7 @@ exports.get_order_single_by_id = async (req, res) => {
     const id = req.query.id;
 
     const order = await Order.findOne({ _id: id })
-      .populate("products.product", "name") // ✅ only get product name
+      .populate("products.product", "name front_image") // ✅ only get product name
       .lean(); // ✅ return plain JS object, easier to reshape
 
     if (!order) {
@@ -373,11 +373,13 @@ exports.get_order_single_by_id = async (req, res) => {
         name: p.product?.name,
         quantity: p.quantity,
         total_price: p.total_price,
-        image: p.front_image,
+        image: p.product.front_image,
       })),
       address: order.address,
+    
     };
-
+    console.log(order.products)
+   
     res.status(200).json({ success: true, data: response });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
