@@ -42,7 +42,11 @@ exports.admin_login = async (req, res) => {
       `Your OTP is ${create_otp.OTP}`
     );
 
-    res.status(200).json({ message: "Otp sent to your email", data: response ,code:create_otp.OTP});
+    res.status(200).json({
+      message: "Otp sent to your email",
+      data: response,
+      code: create_otp.OTP,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -840,80 +844,77 @@ exports.fetch_collections_by_main_id = async (req, res) => {
 
 exports.fetch_products_by_collection_id = async (req, res) => {
   try {
-    const parentId = new mongoose.Types.ObjectId(req.query.id);
+    console.log(req.query);
+    const { collection, brand, category, page } = req.query;
+    const limit = 9;
 
-    // Step 1: Get all children IDs using $graphLookup
-    const result = await category_model.aggregate([
-      {
-        $match: { _id: parentId },
-      },
-      {
-        $graphLookup: {
-          from: "categories",
-          startWith: "$_id",
-          connectFromField: "_id",
-          connectToField: "parent",
-          as: "allChildren",
-          depthField: "level",
-        },
-      },
-      {
-        $project: {
-          children_ids: {
-            $map: {
-              input: "$allChildren",
-              as: "child",
-              in: "$$child._id",
-            },
-          },
-          _id: 0,
-        },
-      },
-    ]);
-
-    console.log("checking");
-
-    if (!result.length) {
-      return res.status(404).json({ message: "No categories found" });
+    let collection_name = "";
+    if (collection == "all") {
+      collection_name = "";
+    } else {
+      const find_collection_name = await category_model
+        .findOne({ _id: collection })
+        .select("name");
+      collection_name = find_collection_name.name;
     }
 
-    // Step 2: Add parent ID to children IDs
-    const childrenIds = [parentId, ...result[0].children_ids];
-    console.log("checking", childrenIds);
-    // Step 3: Fetch products by category
+    if (category == "all") {
+      collection_name += "";
+    } else {
+      collection_name += " " + category;
+    }
+
+    const regexPattern = collection_name
+      .split(/\s+/) // split by spaces
+      .map((word) => word) // keep words
+      .join(".*"); // allow anything in between
+
+    const results = await category_model
+      .find({
+        path: { $regex: regexPattern, $options: "i" },
+      })
+      .select("name");
+
+    let brandFilter = {};
+
+    if (brand && brand !== "all") {
+      const find_brand = await brand_model
+        .findOne({ name: brand })
+        .select("_id");
+      if (find_brand) {
+        brandFilter = { brand: find_brand._id };
+      }
+    }
+
     const products = await product_model
       .find({
-        category: { $in: childrenIds },
+        category: { $in: results.map((val) => val._id) },
+        ...brandFilter,
       })
       .select(
         "name _id front_image price discount_price brand quantity rating reviewCount"
-      ) // product fields
-      .populate({
-        path: "brand",
-        select: "name _id", // brand fields
-      })
-      .populate({
-        path: "category",
-        select: "name _id", // brand fields
-      });
-    console.log(products);
+      )
+      .skip((parseInt(page) - 1) * limit)
+      .limit(limit);
 
-    const find_brand = products
-      .map((val) => val.brand)
-      .filter((brand) => brand && brand._id); // ✅ take only if brand exists
+    const total_document = await product_model.countDocuments({
+      category: { $in: results.map((val) => val._id) },
+      ...brandFilter,
+    });
 
-    const unique = [
-      ...new Map(find_brand.map((item) => [item._id, item])).values(),
-    ];
+    const brandsIds = await product_model.distinct("brand");
+    const find_brands =
+      brandsIds.length > 0
+        ? await brand_model.find({ _id: { $in: brandsIds } }).select("_id name")
+        : [];
 
     res.status(200).json({
-      message: "fetched",
+      message: "your product list found",
       data: products,
-      brands: unique,
+      brands: find_brands,
+      total_products: total_document,
     });
   } catch (error) {
-    console.error(error.message, "dkdkdkdkdkd");
-
     if (error.name === "ValidationError") {
       const messages = Object.values(error.errors).map((err) => err.message);
       return res.status(400).json({ message: messages.join(", ") });
@@ -925,65 +926,66 @@ exports.fetch_products_by_collection_id = async (req, res) => {
 
 exports.fetch_filter_category_by_id = async (req, res) => {
   try {
-    const parentId = new mongoose.Types.ObjectId(req.query.id);
+    if (req.query.id == "all") {
+      const find_main_ = await category_model.find({parent:null})
+      res.status(200).json({message:'collection find',data:find_main_})
+    } else {
+      if (!mongoose.Types.ObjectId.isValid(req.query.id)) {
+        return res.status(400).json({ message: "url is invalid" });
+      } else {
+        const parentId = new mongoose.Types.ObjectId(req.query.id);
 
-    const result = await category_model.aggregate([
-      {
-        $match: { _id: parentId },
-      },
-      {
-        $graphLookup: {
-          from: "categories",
-          startWith: "$_id",
-          connectFromField: "_id",
-          connectToField: "parent",
-          as: "allChildren",
-          depthField: "level",
-        },
-      },
-      {
-        $unwind: "$allChildren",
-      },
-      {
-        $match: {
-          "allChildren.type": "part",
-        },
-      },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "allChildren._id",
-          foreignField: "parent",
-          as: "childCheck",
-        },
-      },
-      {
-        $match: {
-          childCheck: { $size: 0 },
-        },
-      },
-      {
-        $project: {
-          _id: "$allChildren._id",
-          name: "$allChildren.name",
-        },
-      },
-      // ✅ Group by name to ensure uniqueness
-      {
-        $group: {
-          _id: "$name", // unique name
-        },
-      },
-      {
-        $project: {
-          _id: "$id",
-          name: "$_id",
-        },
-      },
-    ]);
+        const result = await category_model.aggregate([
+          {
+            $match: { _id: parentId },
+          },
+          {
+            $graphLookup: {
+              from: "categories",
+              startWith: "$_id",
+              connectFromField: "_id",
+              connectToField: "parent",
+              as: "allChildren",
+              depthField: "level",
+            },
+          },
+          { $unwind: "$allChildren" },
+          { $match: { "allChildren.type": "part" } },
+          {
+            $lookup: {
+              from: "categories",
+              localField: "allChildren._id",
+              foreignField: "parent",
+              as: "childCheck",
+            },
+          },
+          { $match: { childCheck: { $size: 0 } } },
+          {
+            // Keep both _id and name
+            $project: {
+              _id: "$allChildren._id",
+              name: "$allChildren.name",
+            },
+          },
+          // Group by name, keep first _id for uniqueness
+          {
+            $group: {
+              _id: "$name",
+              id: { $first: "$_id" },
+            },
+          },
+          // Project final output with both id and name
+          {
+            $project: {
+              _id: "$id",
+              name: "$_id",
+            },
+          },
+        ]);
 
-    console.log(result);
-    res.status(200).json({ message: "fetched", data: result });
+        res.status(200).json({ message: "fetched", data: result });
+      }
+    }
   } catch (error) {
     console.error(error.message);
 

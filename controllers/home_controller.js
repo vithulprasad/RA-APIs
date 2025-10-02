@@ -303,7 +303,7 @@ exports.get_home_section_user_side = async (req, res) => {
       .populate("category", "_id name path image"); // populate category info
     console.log(find_category_product,'ddd');
     // ✅ Fetch all brands
-    const find_brand = await brand_model.find().select("_id image");
+    const find_brand = await brand_model.find().select("_id name image");
 
     // ✅ Transform products into ProductCard-compatible format
     const categoryProducts = find_category_product.map((p) => ({
